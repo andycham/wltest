@@ -2,7 +2,7 @@
 
 WL Test is a PHP console application that scrapes the following website
 https://wltest.dns-systems.net/ 
-and returns a JSON array of all the product options on the page, sorted by the annual price in descending.
+and returns a JSON array of all the product options on the page, sorted by the annual price in descending order.
 
 ## Installing Dependencies
 

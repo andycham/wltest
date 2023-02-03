@@ -1,0 +1,22 @@
+{
+    "name": "andycham/wltest",
+    "description": "Outputs JSON array of product options ordered by annual price (most expensive first).",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "AndyCham\\WlTest\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Andy Cham",
+            "email": "andy.cham@jirTEC.com"
+        }
+    ],
+    "require": {
+        "monolog/monolog": "^3.2",
+        "vlucas/phpdotenv": "^5.5"        
+    }
+}

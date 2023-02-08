@@ -60,11 +60,9 @@ Test output should be:
 ```
 PHPUnit 9.5.28 by Sebastian Bergmann and contributors.
 
-Runtime:       PHP 8.2.2
-
 .............                                                     13 / 13 (100%)
 
-Time: 00:00.079, Memory: 6.00 MB
+Time: 00:00.999, Memory: 6.00 MB
 
 OK (13 tests, 16 assertions)
 ```

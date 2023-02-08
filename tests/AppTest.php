@@ -36,8 +36,7 @@ class AppTest extends TestCase{
     $content = file_get_contents($filePath);
     $app = $this->getMockBuilder('App')->setMethods(['setUpLog','getContent'])->getMock();
     $app->method('getContent')->willReturn($content);
-    $app->setUpLog();    
-    $content = $app->getContent('https://wltest.dns-systems.net/');    
+    $app->setUpLog();        
     $this->assertNotEquals($content, '');
   }
 

@@ -2,8 +2,10 @@
 //--------------
 // UNIT TESTS 
 //--------------
+namespace andycham\wltest;
+use Product;
 
-require_once __DIR__ . '\..\src\App.php';
+require_once __DIR__ . '/../src/App.php';
 
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +30,13 @@ class AppTest extends TestCase{
   // Test that the GetContent function returns some content.
   public function testGetContent(){
     $app = new App();
-    $app->setUpLog();
+
+    // Read from static file instead of live website ($app->getContent('https://wltest.dns-systems.net/')
+    $filePath = __DIR__ . '/mockSite.html';
+    $content = file_get_contents($filePath);
+    $app = $this->getMockBuilder('App')->setMethods(['setUpLog','getContent'])->getMock();
+    $app->method('getContent')->willReturn($content);
+    $app->setUpLog();    
     $content = $app->getContent('https://wltest.dns-systems.net/');    
     $this->assertNotEquals($content, '');
   }
@@ -37,7 +45,10 @@ class AppTest extends TestCase{
   public function testParseContent(){
     $app = new App();
     $app->setUpLog();
-    $content = $app->getContent('https://wltest.dns-systems.net/');    
+    
+    // Read from static file instead of live website ($app->getContent('https://wltest.dns-systems.net/')
+    $filePath = __DIR__ . '/mockSite.html';
+    $content = file_get_contents($filePath);    
     $app->parseContent($content);
     $productCount = count($app->products);
     $this->assertGreaterThan(0, $productCount);

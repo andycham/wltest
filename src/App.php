@@ -1,29 +1,38 @@
 <?php
+
+namespace andycham\wltest;
+
 require_once(__DIR__ .'/../vendor/autoload.php');
+require_once(__DIR__ .'/ProductFactory.php');
 require_once(__DIR__ .'/Product.php');
 
 use Monolog\Level;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Dotenv\Dotenv;
+use andycham\wltest\ProductFactory;
+use DOMDocument;
+use DOMElement;
+use DOMXPath;
 
 Class App 
 {
   public $log;
   public string $url = '';
+  public int $logToScreen = 0;
   public string $content = '';
   public $products=[];
 
   // -------------------------------------------------------
   // Main Entry Point of App
   // -------------------------------------------------------
-  public function main(){
-    // Set up log
-    $this->setUpLog();
-    
+  public function main() : void {
     // Get environmental variable settings from .env file.
     $this->getSettings();
     
+    // Set up log
+    $this->setUpLog();
+        
     $this->log->info('Starting App');
     $this->log->info('Source URL is ' . $this->url);
 
@@ -44,15 +53,23 @@ Class App
 
 
   // Load settings from .env file.
-  public function getSettings(){
+  public function getSettings() : void {
     $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
     $dotenv->safeLoad();
     if(isset($_ENV['SOURCE_URL'])){
       $this->url = $_ENV['SOURCE_URL'];
-    }    
+    }
+    if(isset($_ENV['LOG_TO_SCREEN'])){
+      if($_ENV['LOG_TO_SCREEN']=='1'){
+        $this->logToScreen = 1;
+      } else {
+        $this->logToScreen = 0;
+      }     
+    }
   }
 
-  public function setUpLog(){
+
+  public function setUpLog() : void {
     // Set up logging
     $this->log = new Logger('main');
 
@@ -60,99 +77,69 @@ Class App
     $this->log->pushHandler(new StreamHandler('logs/application.log', Level::Debug));
 
     // Log to screen
-    $this->log->pushHandler(new StreamHandler('php://stdout', Level::Info));
+    if($this->logToScreen==1){
+      $this->log->pushHandler(new StreamHandler('php://stdout', Level::Info));
+    }
   }
 
+
   // Return content from website url
-  public function getContent($url){
+  public function getContent($url) : string {
     $content = file_get_contents($url);
     return $content;
   }
 
+
   // Parse website content to get products.
-  public function parseContent($content){
+  public function parseContent($content) : void {
     //Suppress any warnings
     libxml_use_internal_errors(true);
     
     $this->log->info("Parsing content");
+    
     $doc = new DOMDocument();
     $doc->loadHTML($content);
     $xpath = new DOMXPath($doc);
 
     // Get DOMElements for all products
-    $productElements = $xpath->evaluate('//div[@class="row-subscriptions"]/div');
+    $elements = $xpath->evaluate('//div[@class="row-subscriptions"]/div');
     
-    foreach($productElements as $productElement){
-      // Now parse each product DOMElement to get the attributes of the product
-      $title = $xpath->query('.//h3', $productElement)[0]->textContent;
-      $description = $xpath->query('.//div[@class="package-description"]', $productElement)[0]->textContent;
-      $price = $xpath->query('.//span[@class="price-big"]', $productElement)[0]->textContent;
+    $productFactory = new ProductFactory();
 
-      // Clean up price
-      $price = str_replace('£', '', $price);
-
-      // Get Discount
-      if($xpath->query('.//div[@class="package-price"]/p', $productElement)[0]){
-        $discount = $xpath->query('.//div[@class="package-price"]/p', $productElement)[0]->textContent;
-        // Clean up the surrounding text to get the discount amount.
-        $discount = str_replace('Save £', '', $discount);
-        $discount = str_replace(' on the monthly price', '', $discount);
-      } else {
-        $discount = 0;
-      }      
-
-      // Determine whether price is for month or year and set monthlyPrice and annualPrice accordingly
-      $price_raw = $xpath->query('.//div[@class="package-price"]', $productElement)[0]->textContent;
-      if(strpos($price_raw, 'Month')){
-        $monthlyPrice = $price;
-        $annualPrice = $price * 12;
-      } else {
-        $monthlyPrice = $price / 12;
-        $annualPrice = $price;
-      }
+    foreach($elements as $element){
+      // Now parse each product DOMElement to get the attributes of the product 
+      $this->log->debug("element = " . print_r($element, true)); 
+      $product = $productFactory->create($element, $doc);
+      $this->products[] = $product;
 
       // Log some debugging info
-      $this->log->debug("title = " . $title);
-      $this->log->debug("description = " . $description);
-      $this->log->debug("price = " . $price);
-      $this->log->debug("discount = " . $discount);
-
-      // Create new product
-      $product = new Product();
-      $product->title = $title;
-      $product->description = $description;
-      $product->price = $price;
-      $product->monthlyPrice = $monthlyPrice;
-      $product->annualPrice = $annualPrice;
-      $product->price = $price;
-      $product->discount = $discount;
-
-      // Add product to products array
-      $this->products[] = $product; 
+      $this->log->debug("title = " . $product->title); 
     }
   }
 
+
+  // Comparison function for sorting
+  public function cmp($a, $b) : int{
+    if($a->annualPrice < $b->annualPrice){
+      return 1;
+    } else {
+      return 0;
+    }        
+  }
+  
   // Sort Products by Annual Price with the most expensive first.
-  function sortProducts(){
+  public function sortProducts() : void{
     $this->log->info('Sorting Products');    
     $products = $this->products;
 
-    function cmp($a, $b) {
-      if($a->annualPrice < $b->annualPrice){
-        return true;
-      } else {
-        return false;
-      }        
-    }
-
     $tempProducts = $products;
-    usort($tempProducts, "cmp");
+    usort($tempProducts, array($this, "cmp"));
 
     $this->products = $tempProducts;    
   }
 
   // Output JSON
-  function outputJson(){
+  public function outputJson() : string{
     $this->log->info('Outputting JSON'); 
     $products = $this->products;
     return json_encode($products);
